@@ -7,4 +7,5 @@ type Service interface {
 	Exists(namespace, namespaceA, namespaceB, valueA string) (bool, error)
 	Search(namespace, namespaceA, namespaceB, valueA string) (string, error)
 	Shutdown()
+	Update(namespace, namespaceA, namespaceB, valueA, valueB string) error
 }

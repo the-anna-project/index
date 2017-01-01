@@ -77,7 +77,17 @@ func (s *service) Boot() {
 func (s *service) Create(namespace, namespaceA, namespaceB, valueA, valueB string) error {
 	key := s.key(namespace, namespaceA, namespaceB, valueA)
 
-	err := s.storage.Index.Set(key, valueB)
+	// We only want to create a new index mapping in case there does none exist
+	// yet. For updating purposes clients have to use Service.Update.
+	ok, err := s.storage.Index.Exists(key)
+	if err != nil {
+		return maskAny(err)
+	}
+	if ok {
+		return nil
+	}
+
+	err = s.storage.Index.Set(key, valueB)
 	if err != nil {
 		return maskAny(err)
 	}
@@ -124,6 +134,26 @@ func (s *service) Shutdown() {
 	s.shutdownOnce.Do(func() {
 		close(s.closer)
 	})
+}
+
+func (s *service) Update(namespace, namespaceA, namespaceB, valueA, valueB string) error {
+	key := s.key(namespace, namespaceA, namespaceB, valueA)
+
+	// We only want to update an index mapping in case there does one exist.
+	ok, err := s.storage.Index.Exists(key)
+	if err != nil {
+		return maskAny(err)
+	}
+	if !ok {
+		return maskAnyf(notFoundError, key)
+	}
+
+	err = s.storage.Index.Set(key, valueB)
+	if err != nil {
+		return maskAny(err)
+	}
+
+	return nil
 }
 
 func (s *service) key(namespace, namespaceA, namespaceB, valueA string) string {
